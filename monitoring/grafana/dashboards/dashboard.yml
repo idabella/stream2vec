@@ -1,0 +1,18 @@
+# =============================================================
+# Grafana — Dashboard Provisioning Configuration
+# =============================================================
+
+apiVersion: 1
+
+providers:
+  - name: 'stream2vec-dashboards'
+    orgId: 1
+    folder: 'Stream2Vec'
+    folderUid: 'stream2vec'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false
