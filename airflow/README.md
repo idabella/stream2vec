@@ -1,34 +1,35 @@
-# Stream2Vec — Airflow Orchestration
+# Stream2Vec — Airflow
 
-Apache Airflow DAGs for pipeline orchestration.
+> Orchestration des pipelines avec Apache Airflow.
+
+## Rôle
+
+Airflow orchestre les workflows périodiques et les tâches de coordination
+du pipeline Stream2Vec.
+
+Il ne remplace pas Kafka/Spark pour le streaming temps réel,
+mais gère les tâches batch et les workflows planifiés.
 
 ## DAGs
 
-| DAG | Schedule | Description |
-|-----|----------|-------------|
-| `stream2vec_pipeline` | */15 * * * * | Main processing pipeline |
+| DAG | Description | Schedule |
+|-----|-------------|----------|
+| `document_pipeline_dag` | Surveillance et déclenchement du pipeline | À définir |
+| `reindex_dag` | Réindexation complète de Qdrant | Hebdomadaire |
+| `cleanup_dag` | Nettoyage des fichiers temporaires | Quotidien |
 
-## Setup
+## Accès
 
 ```bash
-# Initialize Airflow DB
-airflow db init
+# Démarrer Airflow
+docker compose up airflow -d
 
-# Create admin user
-airflow users create \
-  --username admin \
-  --password admin \
-  --firstname Admin \
-  --lastname User \
-  --role Admin \
-  --email admin@stream2vec.io
-
-# Start services
-airflow webserver --port 8081 &
-airflow scheduler
+# Interface web
+open http://localhost:8088
 ```
 
-## Access
+Identifiants par défaut : `admin` / `admin`
 
-- Webserver: http://localhost:8081
-- Default credentials: admin / admin
+## Variables d'environnement
+
+Voir `.env.example`.

@@ -1,45 +1,61 @@
-# Stream2Vec — Spark Processing Pipeline
+# Stream2Vec — Spark
 
-Apache Spark Structured Streaming pipeline for document vectorization.
+> Apache Spark Structured Streaming pipeline for document processing and vectorization.
+
+## Rôle
+
+Ce module contient les jobs Spark Structured Streaming qui constituent
+le cœur du pipeline de traitement de Stream2Vec.
+
+Le pipeline Spark consomme les événements Kafka, traite les documents
+et indexe les vecteurs dans Qdrant.
 
 ## Pipeline
 
 ```
-Kafka (documents.uploaded)
-  ↓ ExtractorProcessor     — Extract text from PDF/DOCX/TXT
-  ↓ CleanerProcessor       — Normalize and clean text
-  ↓ ChunkerProcessor       — Split into semantic chunks
-  ↓ EmbeddingProcessor     — Generate vectors (SentenceTransformers)
-  ↓ QdrantWriter           — Store in Qdrant
-  ↓ Kafka (documents.processed)
+Kafka (documents.raw)
+    ↓
+Extraction (texte brut depuis PDF/DOCX/TXT)
+    ↓
+Nettoyage (normalisation, déduplication)
+    ↓
+Chunking (découpage en segments)
+    ↓
+Embeddings (SentenceTransformers)
+    ↓
+Qdrant (indexation vectorielle)
 ```
 
 ## Structure
 
 ```
 spark/
-├── jobs/
-│   └── streaming_job.py    # Main Spark entry point
-├── processors/             # Pipeline orchestration
-├── extractors/             # Text extraction by format
-├── cleaners/               # Text normalization
-├── chunkers/               # Text segmentation strategies
-├── embeddings/             # Vector generation
-├── writers/                # Qdrant output writers
-├── utils/                  # Shared helpers
-└── config/
-    └── spark_config.py     # Centralized configuration
+├── jobs/          # Entry points spark-submit
+├── processors/    # Orchestrateurs de pipeline
+├── config/        # Configuration SparkSession
+└── utils/         # Utilitaires partagés
 ```
 
-## Submit Job
+## Démarrage
 
 ```bash
-spark-submit \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 \
+# Via Docker Compose
+docker compose up spark-master spark-worker -d
+
+# Soumettre un job (quand implémenté)
+docker compose exec spark-master spark-submit \
   --master spark://spark-master:7077 \
-  jobs/streaming_job.py
+  /opt/spark/work-dir/jobs/document_pipeline.py
 ```
 
-## Configuration
+## Variables d'environnement
 
-All settings are read from environment variables. See `config/spark_config.py`.
+Voir `.env.example`.
+
+## Roadmap
+
+- [ ] Implémentation de l'extraction de texte (PDF, DOCX, TXT)
+- [ ] Nettoyage et normalisation du texte
+- [ ] Chunking avec overlap configurable
+- [ ] Intégration SentenceTransformers
+- [ ] Écriture dans Qdrant

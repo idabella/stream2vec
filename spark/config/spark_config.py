@@ -1,88 +1,48 @@
 """
-Stream2Vec — Spark Configuration.
+Spark Configuration — Centralized Spark session and configuration.
 
-Centralized configuration for the Spark streaming pipeline.
-Reads from environment variables with sensible defaults.
+Provides a factory function for creating configured SparkSession instances.
+All Spark configuration is centralized here.
 """
 
 import os
-from dataclasses import dataclass, field
+from typing import Optional
+
+# TODO: Import pyspark when implementing Spark jobs
+# from pyspark.sql import SparkSession
 
 
-@dataclass
-class SparkConfig:
-    """Configuration for the Spark Structured Streaming job."""
+def create_spark_session(
+    app_name: Optional[str] = None,
+    master: Optional[str] = None,
+) -> object:  # -> SparkSession when implemented
+    """Create and configure a SparkSession for Stream2Vec.
 
-    # ── Spark ────────────────────────────────────────────────
-    APP_NAME: str = field(
-        default_factory=lambda: os.getenv("SPARK_APP_NAME", "Stream2Vec")
-    )
-    MASTER_URL: str = field(
-        default_factory=lambda: os.getenv("SPARK_MASTER_URL", "spark://spark-master:7077")
-    )
-    SHUFFLE_PARTITIONS: int = field(
-        default_factory=lambda: int(os.getenv("SPARK_SHUFFLE_PARTITIONS", "10"))
-    )
+    Configuration includes:
+    - Kafka connector for Structured Streaming
+    - MinIO (S3-compatible) storage connector
+    - Qdrant connector settings
 
-    # ── Kafka ────────────────────────────────────────────────
-    KAFKA_BOOTSTRAP_SERVERS: str = field(
-        default_factory=lambda: os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
-    )
-    KAFKA_TOPIC_INPUT: str = field(
-        default_factory=lambda: os.getenv("KAFKA_TOPIC_DOCUMENTS", "documents.uploaded")
-    )
-    KAFKA_TOPIC_OUTPUT: str = field(
-        default_factory=lambda: os.getenv("KAFKA_TOPIC_PROCESSED", "documents.processed")
-    )
-    KAFKA_CONSUMER_GROUP: str = field(
-        default_factory=lambda: os.getenv("KAFKA_CONSUMER_GROUP", "spark-stream2vec")
-    )
+    Args:
+        app_name: Spark application name. Defaults to APP_NAME env var.
+        master: Spark master URL. Defaults to SPARK_MASTER env var.
 
-    # ── MinIO ────────────────────────────────────────────────
-    MINIO_ENDPOINT: str = field(
-        default_factory=lambda: os.getenv("MINIO_ENDPOINT", "minio:9000")
-    )
-    MINIO_ACCESS_KEY: str = field(
-        default_factory=lambda: os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-    )
-    MINIO_SECRET_KEY: str = field(
-        default_factory=lambda: os.getenv("MINIO_SECRET_KEY", "minioadmin123")
-    )
+    Returns:
+        SparkSession: Configured Spark session.
 
-    # ── Qdrant ───────────────────────────────────────────────
-    QDRANT_HOST: str = field(
-        default_factory=lambda: os.getenv("QDRANT_HOST", "qdrant")
-    )
-    QDRANT_PORT: int = field(
-        default_factory=lambda: int(os.getenv("QDRANT_PORT", "6333"))
-    )
-    QDRANT_COLLECTION: str = field(
-        default_factory=lambda: os.getenv("QDRANT_COLLECTION", "documents")
-    )
+    Raises:
+        NotImplementedError: Until Spark integration is implemented.
+    """
+    _app_name = app_name or os.getenv("SPARK_APP_NAME", "Stream2Vec")
+    _master = master or os.getenv("SPARK_MASTER", "local[*]")
 
-    # ── Embeddings ───────────────────────────────────────────
-    EMBEDDING_MODEL: str = field(
-        default_factory=lambda: os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-    )
-    EMBEDDING_DIMENSION: int = field(
-        default_factory=lambda: int(os.getenv("EMBEDDING_DIMENSION", "384"))
-    )
-    EMBEDDING_BATCH_SIZE: int = field(
-        default_factory=lambda: int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
-    )
-
-    # ── Chunking ─────────────────────────────────────────────
-    CHUNK_SIZE: int = field(
-        default_factory=lambda: int(os.getenv("CHUNK_SIZE", "512"))
-    )
-    CHUNK_OVERLAP: int = field(
-        default_factory=lambda: int(os.getenv("CHUNK_OVERLAP", "50"))
-    )
-
-    # ── Checkpointing ────────────────────────────────────────
-    CHECKPOINT_LOCATION: str = field(
-        default_factory=lambda: os.getenv("SPARK_CHECKPOINT_LOCATION", "/tmp/spark/checkpoints")
-    )
-    TRIGGER_INTERVAL: str = field(
-        default_factory=lambda: os.getenv("SPARK_TRIGGER_INTERVAL", "10 seconds")
-    )
+    # TODO: Implement SparkSession creation
+    # return (
+    #     SparkSession.builder
+    #     .appName(_app_name)
+    #     .master(_master)
+    #     .config("spark.sql.streaming.checkpointLocation", "/tmp/checkpoints")
+    #     .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0")
+    #     .getOrCreate()
+    # )
+    raise NotImplementedError("SparkSession not yet implemented.")

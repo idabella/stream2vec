@@ -1,9 +1,9 @@
-# =============================================================
+# =============================================================================
 # Stream2Vec Spark — Dockerfile
-# Based on official Bitnami Spark image
-# =============================================================
+# PySpark with Kafka and MinIO connectors
+# =============================================================================
 
-FROM bitnami/spark:3.5.0
+FROM bitnami/spark:3.5
 
 USER root
 
@@ -12,13 +12,8 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Copy Spark application code
-COPY . /opt/spark/app
+COPY . /opt/spark/work-dir/
 
-# Set working directory
-WORKDIR /opt/spark/app
+WORKDIR /opt/spark/work-dir
 
-# Switch back to non-root user
 USER 1001
-
-# Default command (overridden by docker-compose)
-CMD ["spark-class", "org.apache.spark.deploy.master.Master"]

@@ -1,69 +1,52 @@
-# =============================================================
+# =============================================================================
 # Stream2Vec — Prometheus Configuration
-# Scrapes metrics from all platform services
-# =============================================================
+# =============================================================================
 
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 15s       # How often to scrape targets
+  evaluation_interval: 15s   # How often to evaluate rules
   scrape_timeout: 10s
-  external_labels:
-    monitor: 'stream2vec-monitor'
-    environment: 'development'
 
-# Alertmanager configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: []
-          # - alertmanager:9093
+# Alerting rules (to be configured)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
 
-# Load alerting rules
-rule_files:
-  # - "alert_rules.yml"
-
-# Scrape targets
+# --- Scrape targets ---
 scrape_configs:
 
-  # ── Prometheus self-monitoring ────────────────────────────
+  # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-    metrics_path: '/metrics'
 
-  # ── Stream2Vec FastAPI Backend ────────────────────────────
+  # Stream2Vec Backend (FastAPI)
+  # TODO: Add prometheus-fastapi-instrumentator to backend
   - job_name: 'stream2vec-backend'
     static_configs:
       - targets: ['backend:8000']
     metrics_path: '/metrics'
-    scrape_interval: 10s
 
-  # ── PostgreSQL (via postgres-exporter) ────────────────────
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['postgres-exporter:9187']
+  # Kafka (via JMX exporter)
+  # TODO: Configure JMX exporter on Kafka
+  # - job_name: 'kafka'
+  #   static_configs:
+  #     - targets: ['kafka:9308']
 
-  # ── Kafka (via kafka-exporter) ────────────────────────────
-  - job_name: 'kafka'
-    static_configs:
-      - targets: ['kafka-exporter:9308']
+  # Spark Master
+  # TODO: Configure Spark metrics
+  # - job_name: 'spark'
+  #   static_configs:
+  #     - targets: ['spark-master:4040']
 
-  # ── MinIO ─────────────────────────────────────────────────
-  - job_name: 'minio'
-    static_configs:
-      - targets: ['minio:9000']
-    metrics_path: '/minio/v2/metrics/cluster'
-    scheme: http
-
-  # ── Qdrant ────────────────────────────────────────────────
+  # Qdrant
   - job_name: 'qdrant'
     static_configs:
       - targets: ['qdrant:6333']
     metrics_path: '/metrics'
 
-  # ── Spark Master ──────────────────────────────────────────
-  - job_name: 'spark-master'
-    static_configs:
-      - targets: ['spark-master:8080']
-    metrics_path: '/metrics/master/prometheus'
-    honor_labels: true
+  # Node Exporter (host metrics)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']

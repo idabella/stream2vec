@@ -1,77 +1,95 @@
-# Stream2Vec — Architecture Overview
+# Architecture — Stream2Vec
 
-## System Architecture
+## Vue d'ensemble
+
+Stream2Vec est une plateforme Cloud-Native d'ingestion et vectorisation de documents.
+Elle est conçue selon les principes **Event-Driven Architecture** et **Clean Architecture**.
+
+## Diagramme d'architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        User / Client                         │
-└─────────────────────┬───────────────────────────────────────┘
-                       │ HTTP REST
-┌─────────────────────▼───────────────────────────────────────┐
-│                   FastAPI Backend                            │
-│  ┌─────────────┐ ┌──────────────┐ ┌───────────────────────┐ │
-│  │  Documents  │ │    Search    │ │    Health / Metrics    │ │
-│  │  Endpoints  │ │  Endpoints   │ │      Endpoints         │ │
-│  └──────┬──────┘ └──────┬───────┘ └───────────────────────┘ │
-│         │               │                                     │
-│  ┌──────▼──────────────▼───────────────────────────────────┐ │
-│  │              Service Layer (Business Logic)              │ │
-│  └──────┬──────────────────────────────┬────────────────────┘ │
-│         │                              │                      │
-│  ┌──────▼──────┐              ┌────────▼──────────────────┐  │
-│  │ Repository  │              │    Storage / Messaging     │  │
-│  │   Layer     │              │   MinIO │ Kafka │ Qdrant   │  │
-│  └──────┬──────┘              └───────────────────────────┘  │
-│         │ SQLAlchemy                                          │
-└─────────┼──────────────────────────────────────────────────┘ │
-          │                                                      │
-┌─────────▼──────┐   ┌──────────┐   ┌────────────────────────┐
-│   PostgreSQL   │   │  MinIO   │   │         Kafka           │
-│   (Metadata)   │   │(Objects) │   │    (Event Streaming)   │
-└────────────────┘   └──────────┘   └───────────┬────────────┘
-                                                  │
-                                    ┌─────────────▼────────────┐
-                                    │   Apache Spark            │
-                                    │   Structured Streaming    │
-                                    │                           │
-                                    │  Extract → Clean          │
-                                    │  → Chunk → Embed → Write  │
-                                    └─────────────┬────────────┘
-                                                  │
-                                    ┌─────────────▼────────────┐
-                                    │          Qdrant           │
-                                    │     Vector Database       │
-                                    └──────────────────────────┘
+│                        Client                               │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP/REST
+┌──────────────────────────▼──────────────────────────────────┐
+│                  FastAPI Backend                            │
+│         (Ingestion API + Metadata + Search API)             │
+└────────────┬─────────────────────────────┬──────────────────┘
+             │                             │
+    ┌────────▼──────┐             ┌────────▼──────┐
+    │    MinIO      │             │  PostgreSQL    │
+    │ (Raw Files)   │             │ (Metadata)     │
+    └────────┬──────┘             └───────────────┘
+             │ Event
+    ┌────────▼──────┐
+    │    Kafka      │
+    │  (Broker)     │
+    └────────┬──────┘
+             │ Stream
+    ┌────────▼──────────────────────────┐
+    │     Spark Structured Streaming    │
+    │  Extract → Clean → Chunk → Embed  │
+    └────────┬──────────────────────────┘
+             │
+    ┌────────▼──────┐
+    │    Qdrant     │
+    │ (Vector DB)   │
+    └───────────────┘
 ```
 
-## Design Principles
+## Composants
 
-### Clean Architecture
-- **Entities** (Models): Core business objects
-- **Use Cases** (Services): Business logic
-- **Interface Adapters** (Repositories, APIs): Data conversion
-- **Frameworks** (FastAPI, SQLAlchemy): External tools
+### Backend (FastAPI)
 
-### SOLID Principles
-- **S**ingle Responsibility: Each class has one purpose
-- **O**pen/Closed: Open for extension, closed for modification
-- **L**iskov Substitution: Interface contracts respected
-- **I**nterface Segregation: Small, focused interfaces
-- **D**ependency Inversion: Depend on abstractions
+- **Rôle** : Point d'entrée REST, gestion des métadonnées
+- **Responsabilités** : Validation, persistance PostgreSQL, upload MinIO, publication Kafka
+- **Pattern** : Clean Architecture (API → Service → Repository)
 
-## Data Flow
+### MinIO
 
-1. User uploads document via POST /api/v1/documents/upload
-2. FastAPI validates file type and size
-3. File stored in MinIO (raw bucket)
-4. Document record created in PostgreSQL
-5. Event published to Kafka topic `documents.uploaded`
-6. Spark reads event from Kafka
-7. Spark downloads file from MinIO
-8. Text extracted from document
-9. Text cleaned and normalized
-10. Text split into chunks
-11. Chunks vectorized with SentenceTransformers
-12. Vectors stored in Qdrant
-13. Event published to `documents.processed`
-14. PostgreSQL status updated to `completed`
+- **Rôle** : Stockage objet des fichiers bruts (compatible S3)
+- **Bucket principal** : `documents`
+
+### Apache Kafka
+
+- **Rôle** : Message broker découplant l'ingestion du traitement
+- **Topic principal** : `documents.raw`
+
+### Spark Structured Streaming
+
+- **Rôle** : Traitement distribué du pipeline de vectorisation
+- **Mode** : Streaming (micro-batches depuis Kafka)
+
+### Qdrant
+
+- **Rôle** : Base de données vectorielle pour la recherche sémantique
+- **Collection principale** : `documents`
+
+### PostgreSQL
+
+- **Rôle** : Persistance des métadonnées (statut, historique)
+
+## Décisions d'architecture
+
+### Pourquoi Kafka plutôt qu'un appel direct à Spark ?
+
+Kafka découple l'ingestion du traitement. Le backend peut répondre instantanément
+sans attendre la fin du traitement. Spark peut scaler indépendamment.
+
+### Pourquoi MinIO ?
+
+MinIO est compatible S3, ce qui permet une migration transparente vers AWS S3
+sans changer le code applicatif.
+
+### Pourquoi Qdrant ?
+
+Qdrant est optimisé pour la recherche vectorielle avec support natif du filtrage
+sur les métadonnées et des distances cosinus/dot product.
+
+## TODO
+
+- [ ] Ajouter un diagramme de séquence pour le flux d'ingestion
+- [ ] Documenter les décisions de design (ADRs)
+- [ ] Décrire la stratégie de scalabilité
+- [ ] Documenter la stratégie de sécurité

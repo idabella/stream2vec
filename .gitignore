@@ -1,0 +1,72 @@
+# =============================================================================
+# Stream2Vec — .gitignore
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Environment variables (keep .env.example)
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Docker
+.docker/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Alembic
+alembic/versions/
+
+# MinIO data
+data/minio/
+
+# Airflow
+airflow/logs/
+airflow/plugins/__pycache__/
+
+# Spark
+spark/checkpoints/
+spark/spark-warehouse/
+
+# OS
+*.DS_Store

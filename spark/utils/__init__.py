@@ -1,10 +1,8 @@
 """
-Spark Utilities — Shared helpers for the Spark pipeline.
+Spark Utils Package — Shared utilities for Spark jobs.
 
-Includes:
-- MinIO client helper
-- Logging setup
-- Schema definitions
-
-TODO: Implement utility functions.
+Utilities to implement:
+    - schema_utils: Spark DataFrame schema definitions
+    - kafka_utils: Kafka read/write helpers
+    - minio_utils: MinIO read/write helpers
 """

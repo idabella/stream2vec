@@ -1,0 +1,14 @@
+# =============================================================================
+# Grafana — Dashboard Provider (auto-provisioned)
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: stream2vec-dashboards
+    orgId: 1
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
