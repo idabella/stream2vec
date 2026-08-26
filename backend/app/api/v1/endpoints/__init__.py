@@ -1,0 +1,1 @@
+"""Documents endpoints package."""

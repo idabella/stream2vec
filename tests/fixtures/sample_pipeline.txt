@@ -1,0 +1,55 @@
+Stream2Vec pipeline benchmark document
+
+This document is used to measure end-to-end processing time for Stream2Vec.
+The unique token for retrieval tests is AURORA-NEXUS-7741.
+
+Stream2Vec ingests documents through a FastAPI API, stores the raw bytes in MinIO,
+publishes a Kafka event, then Apache Spark extracts text, cleans it, splits it into
+overlapping chunks, generates sentence-transformer embeddings, and upserts vectors
+into Qdrant. PostgreSQL keeps document metadata and processing status.
+
+Aurora Nexus is a fictional industrial monitoring platform. Its command center is
+located in Lyon, France. The on-call rotation uses the pager code AURORA-NEXUS-7741.
+The primary sensor bus is named Helix Bus. Helix Bus samples temperature, vibration,
+and humidity every five seconds. Alerts fire when vibration exceeds 12.4 millimetres
+per second for more than thirty seconds.
+
+The recommended maintenance window is Tuesday 02:00 to 04:00 UTC. Spare parts for
+the Helix Bus gateway are stored in warehouse bay K-19. The gateway firmware version
+used in this document is 4.8.2-stable. Network traffic between gateways and the
+command center uses MQTT over TLS on port 8883.
+
+Retrieval-augmented generation should be able to answer questions such as:
+- What is the pager code for Aurora Nexus?
+- Where is the command center located?
+- What firmware version does the Helix Bus gateway run?
+- When is the recommended maintenance window?
+
+Additional filler paragraphs follow so the chunker produces several chunks.
+
+Quality control procedure: operators inspect Helix Bus gateways after every firmware
+update. They verify that MQTT certificates are valid for at least sixty days, that
+disk usage on the gateway stays below seventy percent, and that the watchdog process
+named nexusd is running. If nexusd is not running, operators restart it with the
+service manager and file an incident tagged AURORA-NEXUS-7741.
+
+Capacity planning notes: a single Spark worker with two cores and two gigabytes of
+memory can embed short documents with all-MiniLM-L6-v2 in a few seconds after the
+model is warm. Cold start is dominated by downloading the model weights and by the
+Structured Streaming trigger interval. Kafka micro-batch delay is therefore part of
+the observed wall-clock latency.
+
+Security notes: MinIO credentials must not be committed. Qdrant authentication is
+disabled in local development and must be enabled in production. Kafka is deployed
+in KRaft mode without ZooKeeper. PostgreSQL stores only metadata, never raw file
+bytes. Raw files remain in the documents bucket.
+
+Operations runbook: if a document stays in pending status, check that spark-job is
+running, that the Kafka topic documents.raw exists, and that the Spark checkpoint
+directory is writable. If status is failed, read error_message on the document row.
+If status is processing for more than ten minutes, inspect Spark executor logs for
+MinIO download errors or embedding failures.
+
+Closing paragraph: AURORA-NEXUS-7741 is the unique retrieval token. Lyon is the
+command-center city. Helix Bus firmware is 4.8.2-stable. Maintenance is Tuesday
+02:00 to 04:00 UTC. Warehouse bay K-19 holds spare gateways.

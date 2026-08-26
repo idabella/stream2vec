@@ -1,14 +1,11 @@
 """
 Models Package — SQLAlchemy ORM models.
 
-Defines the database schema via ORM models.
 All models inherit from app.database.session.Base.
-
-Models to implement:
-    - Document: Represents an ingested document with its metadata
-    - ProcessingJob: Tracks document processing pipeline status
+Importing them here ensures Alembic's autogenerate discovers every table.
 """
 
-# TODO: Import models here so Alembic autodiscovers them
-# from app.models.document import Document
-# from app.models.processing_job import ProcessingJob
+from app.models.document import Document, DocumentStatus  # noqa: F401
+from app.models.processing_job import JobStatus, ProcessingJob  # noqa: F401
+
+__all__ = ["Document", "DocumentStatus", "ProcessingJob", "JobStatus"]

@@ -3,6 +3,10 @@ Database Session — Async SQLAlchemy session factory.
 
 Provides the async engine and session maker for database interactions.
 Use the get_db dependency for injecting sessions into route handlers.
+
+Base is defined in app.database.base and re-exported here for convenience
+so that existing code importing `from app.database.session import Base`
+continues to work unchanged.
 """
 
 from collections.abc import AsyncGenerator
@@ -12,14 +16,13 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import get_settings
+from app.database.base import Base  # noqa: F401 — re-export for backwards compat
 
 settings = get_settings()
 
 # Async SQLAlchemy engine
-# TODO: Configure pool settings from settings.database
 engine = create_async_engine(
     settings.database.url,
     echo=settings.database.echo,
@@ -36,15 +39,6 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
     autocommit=False,
 )
-
-
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy ORM models.
-
-    All models must inherit from this class.
-    """
-
-    pass
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

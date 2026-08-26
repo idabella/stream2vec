@@ -1,6 +1,7 @@
 """
-Storage Package — MinIO object storage client.
+Storage Package — Object storage and vector database clients.
 
-Provides an abstraction layer over MinIO for storing and retrieving
-document files. Implements async file operations.
+Modules:
+    minio_client:  MinIO (S3-compatible) client for document file storage.
+    qdrant_client: Qdrant vector database client for embedding storage and search.
 """

@@ -1,32 +1,67 @@
 """
-Pytest Configuration and Shared Fixtures.
-
-Defines fixtures shared across all test modules:
-- FastAPI test client
-- In-memory database session
-- Mock MinIO client
-- Mock Kafka producer
+Pytest Configuration and Shared Fixtures for Stream2Vec.
 """
 
+from __future__ import annotations
+
+from typing import AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from fastapi.testclient import TestClient
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 
-from main import app
-
-
-@pytest.fixture(scope="session")
-def client() -> TestClient:
-    """FastAPI test client fixture.
-
-    Returns:
-        TestClient: Synchronous test client for FastAPI.
-    """
-    # TODO: Configure test database URL (SQLite for unit tests)
-    # TODO: Override dependencies for mocked services
-    return TestClient(app)
+from app.messaging.kafka_client import KafkaProducerClient
+from app.storage.minio_client import MinIOClient
+from app.storage.qdrant_client import QdrantClientWrapper
+from main import app, lifespan
 
 
-# TODO: Add async_client fixture for async tests
-# TODO: Add db_session fixture with test database
-# TODO: Add mock_minio fixture
-# TODO: Add mock_kafka fixture
+@pytest_asyncio.fixture
+async def client() -> AsyncGenerator[AsyncClient, None]:
+    """Asynchronous HTTP test client for FastAPI with clean event-loop lifespan."""
+    async with lifespan(app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+            yield ac
+
+
+@pytest.fixture
+def mock_minio() -> MagicMock:
+    """Mock MinIO client for isolated unit testing."""
+    mock = MagicMock(spec=MinIOClient)
+    mock.ping.return_value = True
+    mock.upload_file = AsyncMock(return_value="documents/test-uuid/sample.txt")
+    mock.download_file = AsyncMock(return_value=b"Sample document content for unit testing.")
+    mock.delete_file = AsyncMock(return_value=True)
+    return mock
+
+
+@pytest.fixture
+def mock_kafka() -> MagicMock:
+    """Mock Kafka producer client for isolated unit testing."""
+    mock = MagicMock(spec=KafkaProducerClient)
+    mock.ping = AsyncMock(return_value=True)
+    mock.publish_document_event = AsyncMock(return_value=True)
+    return mock
+
+
+@pytest.fixture
+def mock_qdrant() -> MagicMock:
+    """Mock Qdrant client wrapper for isolated unit testing."""
+    mock = MagicMock(spec=QdrantClientWrapper)
+    mock.ping.return_value = True
+    mock._collection = "documents"
+    mock._client = MagicMock()
+    return mock
+
+
+@pytest.fixture
+def sample_text() -> str:
+    """Sample document text fixture for testing processing steps."""
+    return (
+        "Stream2Vec is a cloud-native platform for document ingestion and vectorization.\n"
+        "It uses Apache Spark Structured Streaming to process documents in real-time.\n"
+        "Vector embeddings are indexed into Qdrant for low-latency semantic search.\n"
+        "Retrieval-Augmented Generation (RAG) queries use Google Gemini."
+    )

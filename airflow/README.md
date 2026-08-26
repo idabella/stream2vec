@@ -1,35 +1,32 @@
 # Stream2Vec — Airflow
 
-> Orchestration des pipelines avec Apache Airflow.
+Orchestration for batch supervision of the Stream2Vec pipeline.
 
-## Rôle
+Airflow does **not** replace Kafka/Spark for real-time streaming. The
+`spark-job` service runs Structured Streaming continuously. This DAG
+health-checks dependencies, re-queues documents stuck in `pending`, and
+verifies Qdrant indexation.
 
-Airflow orchestre les workflows périodiques et les tâches de coordination
-du pipeline Stream2Vec.
+## DAG
 
-Il ne remplace pas Kafka/Spark pour le streaming temps réel,
-mais gère les tâches batch et les workflows planifiés.
+| DAG | Schedule | Role |
+|-----|----------|------|
+| `stream2vec_pipeline` | Every 15 minutes | Health checks, Spark app presence, Kafka requeue, Qdrant QA |
 
-## DAGs
-
-| DAG | Description | Schedule |
-|-----|-------------|----------|
-| `document_pipeline_dag` | Surveillance et déclenchement du pipeline | À définir |
-| `reindex_dag` | Réindexation complète de Qdrant | Hebdomadaire |
-| `cleanup_dag` | Nettoyage des fichiers temporaires | Quotidien |
-
-## Accès
+## Access
 
 ```bash
-# Démarrer Airflow
-docker compose up airflow -d
-
-# Interface web
-open http://localhost:8088
+docker compose up -d --build airflow
 ```
 
-Identifiants par défaut : `admin` / `admin`
+UI: http://localhost:8088
 
-## Variables d'environnement
+Credentials: `AIRFLOW_ADMIN_USERNAME` / `AIRFLOW_ADMIN_PASSWORD` from `.env`.
 
-Voir `.env.example`.
+The DAG starts unpaused. Confirm a run:
+
+```bash
+docker compose exec airflow airflow dags unpause -y stream2vec_pipeline
+docker compose exec airflow airflow dags trigger stream2vec_pipeline
+docker compose exec airflow airflow dags list-runs -d stream2vec_pipeline
+```

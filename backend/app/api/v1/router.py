@@ -7,11 +7,10 @@ Add new routers here as features are developed.
 
 from fastapi import APIRouter
 
-# TODO: Import feature routers as they are implemented
-# from app.api.v1.endpoints import documents, search, health
+from app.api.v1.endpoints import documents, search, chat
 
 router = APIRouter(prefix="/api/v1")
 
-# TODO: Include sub-routers
-# router.include_router(documents.router, prefix="/documents", tags=["Documents"])
-# router.include_router(search.router, prefix="/search", tags=["Search"])
+router.include_router(documents.router, prefix="/documents", tags=["Documents"])
+router.include_router(search.router, prefix="/search", tags=["Search"])
+router.include_router(chat.router, prefix="/chat", tags=["Chat (RAG)"])

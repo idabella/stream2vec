@@ -1,0 +1,11 @@
+Warm-path benchmark document for Stream2Vec.
+
+Unique token: HELIX-WARM-9920.
+
+This second file measures processing time after the embedding model is already
+loaded in the Spark executor. Expected latency is dominated by the 5 second
+Structured Streaming trigger plus extract/chunk/embed/upsert of a small text file.
+
+Helix warm path notes: warehouse bay K-19 still holds spare gateways. The pager
+code from the first document was AURORA-NEXUS-7741. This document uses
+HELIX-WARM-9920 instead.

@@ -8,7 +8,7 @@ No hardcoded secrets. All sensitive values must be provided via environment.
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -79,6 +79,7 @@ class QdrantSettings(BaseSettings):
     collection_documents: str = Field(
         default="documents", alias="QDRANT_COLLECTION_DOCUMENTS"
     )
+    api_key: str = Field(default="", alias="QDRANT_API_KEY")
 
 
 class LoggingSettings(BaseSettings):
@@ -88,6 +89,13 @@ class LoggingSettings(BaseSettings):
         default="INFO", alias="LOG_LEVEL"
     )
     format: Literal["json", "text"] = Field(default="json", alias="LOG_FORMAT")
+
+
+class GeminiSettings(BaseSettings):
+    """Google Gemini API settings."""
+
+    api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    model: str = Field(default="gemini-3.6-flash", alias="GEMINI_MODEL")
 
 
 class Settings(BaseSettings):
@@ -107,6 +115,7 @@ class Settings(BaseSettings):
     kafka: KafkaSettings = KafkaSettings()
     qdrant: QdrantSettings = QdrantSettings()
     logging: LoggingSettings = LoggingSettings()
+    gemini: GeminiSettings = GeminiSettings()
 
 
 @lru_cache
