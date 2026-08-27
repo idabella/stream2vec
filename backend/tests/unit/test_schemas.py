@@ -3,12 +3,13 @@ Unit Tests for Pydantic API Schemas.
 """
 
 import uuid
+
 import pytest
 from pydantic import ValidationError
 
 from app.schemas.document import DocumentCreate
-from app.schemas.search import SearchRequest
 from app.schemas.rag import RAGRequest
+from app.schemas.search import SearchRequest
 
 
 def test_document_create_schema():
