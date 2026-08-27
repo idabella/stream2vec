@@ -7,8 +7,8 @@ from httpx import AsyncClient
 
 from app.exceptions.handlers import (
     DocumentNotFoundException,
-    StorageException,
     MessagingException,
+    StorageException,
     VectorStoreException,
 )
 
