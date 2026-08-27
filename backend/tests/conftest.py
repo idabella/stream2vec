@@ -5,7 +5,7 @@ Pytest Configuration and Shared Fixtures for Stream2Vec.
 from __future__ import annotations
 
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -14,16 +14,36 @@ from httpx import ASGITransport, AsyncClient
 from app.messaging.kafka_client import KafkaProducerClient
 from app.storage.minio_client import MinIOClient
 from app.storage.qdrant_client import QdrantClientWrapper
-from main import app, lifespan
 
 
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
-    """Asynchronous HTTP test client for FastAPI with clean event-loop lifespan."""
-    async with lifespan(app):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
-            yield ac
+    """Asynchronous HTTP test client for FastAPI with mocked external services.
+    
+    Mocks all external service connections (PostgreSQL, MinIO, Kafka, Qdrant)
+    to allow unit tests to run in isolation without requiring running services.
+    """
+    # Mock database engine before importing app/lifespan
+    mock_engine = MagicMock()
+    mock_conn = AsyncMock()
+    mock_engine.connect.return_value.__aenter__.return_value = mock_conn
+    mock_engine.connect.return_value.__aexit__.return_value = None
+    mock_conn.execute = AsyncMock(return_value=None)
+    mock_engine.dispose = AsyncMock(return_value=None)
+
+    with patch("app.database.session.engine", mock_engine), \
+         patch("app.storage.minio_client.init_minio_client"), \
+         patch("app.messaging.kafka_client.init_kafka_producer", new_callable=AsyncMock), \
+         patch("app.storage.qdrant_client.init_qdrant_client"), \
+         patch("app.messaging.kafka_client.shutdown_kafka_producer", new_callable=AsyncMock):
+        
+        # Import app and lifespan after mocks are in place
+        from main import app, lifespan
+        
+        async with lifespan(app):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+                yield ac
 
 
 @pytest.fixture
