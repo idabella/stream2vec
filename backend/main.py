@@ -58,14 +58,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     # -------------------------------------------------------------------------
-    # 1. PostgreSQL — Test database connectivity
+    # 1. PostgreSQL — Test database connectivity and create tables
     # -------------------------------------------------------------------------
     from app.database.session import engine
+    from app.database.base import Base
+    import app.models.document  # noqa: F401
     from sqlalchemy import text
 
     async def _init_postgres() -> None:
-        async with engine.connect() as conn:
+        async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
+            await conn.run_sync(Base.metadata.create_all)
 
     for attempt in range(1, 7):
         try:
