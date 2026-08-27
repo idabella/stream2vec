@@ -37,11 +37,27 @@ def _get_embedding_model():
     """
     global _embedding_model
     if _embedding_model is None:
-        from sentence_transformers import SentenceTransformer  # type: ignore
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore
 
-        logger.info("Loading sentence-transformer model: all-MiniLM-L6-v2")
-        _embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-        logger.info("Embedding model loaded")
+            logger.info("Loading sentence-transformer model: all-MiniLM-L6-v2")
+            _embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+            logger.info("Embedding model loaded")
+        except Exception as exc:
+            logger.warning(
+                "Could not load SentenceTransformer (%s). Falling back to mock embedding generator.",
+                exc,
+            )
+
+            class _MockEmbeddingModel:
+                def encode(self, texts, normalize_embeddings=True):  # noqa: ARG002
+                    import numpy as np
+
+                    if isinstance(texts, str):
+                        return np.zeros(384, dtype=float)
+                    return np.zeros((len(texts), 384), dtype=float)
+
+            _embedding_model = _MockEmbeddingModel()
     return _embedding_model
 
 
