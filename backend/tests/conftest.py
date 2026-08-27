@@ -19,7 +19,7 @@ from app.storage.qdrant_client import QdrantClientWrapper
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Asynchronous HTTP test client for FastAPI with mocked external services.
-    
+
     Mocks all external service connections (PostgreSQL, MinIO, Kafka, Qdrant)
     to allow unit tests to run in isolation without requiring running services.
     """
@@ -36,10 +36,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
          patch("app.messaging.kafka_client.init_kafka_producer", new_callable=AsyncMock), \
          patch("app.storage.qdrant_client.init_qdrant_client"), \
          patch("app.messaging.kafka_client.shutdown_kafka_producer", new_callable=AsyncMock):
-        
+
         # Import app and lifespan after mocks are in place
         from main import app, lifespan
-        
+
         async with lifespan(app):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://testserver") as ac:

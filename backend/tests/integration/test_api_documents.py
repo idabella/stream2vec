@@ -3,6 +3,7 @@ Integration Tests for Documents API Endpoints (/api/v1/documents).
 """
 
 import io
+
 import pytest
 from httpx import AsyncClient
 

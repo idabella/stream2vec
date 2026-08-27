@@ -7,7 +7,7 @@ Add new routers here as features are developed.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import documents, search, chat
+from app.api.v1.endpoints import chat, documents, search
 
 router = APIRouter(prefix="/api/v1")
 

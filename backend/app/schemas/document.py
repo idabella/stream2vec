@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.document import DocumentStatus
 
-
 # ── Shared base ──────────────────────────────────────────────────────────────
 
 class DocumentBase(BaseModel):

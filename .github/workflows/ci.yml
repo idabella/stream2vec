@@ -11,8 +11,96 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ... (lint, test-spark, test-backend-unit jobs remain unchanged) ...
+  # =========================================================================
+  # 1. Code Quality & Linting
+  # =========================================================================
+  lint:
+    name: Lint & Style (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.4.4
+
+      - name: Run Ruff Linter
+        run: |
+          cd backend
+          ruff check app/ tests/
+
+  # =========================================================================
+  # 2. Spark Unit Tests (Cleaners, Chunkers, Extractors)
+  # =========================================================================
+  test-spark:
+    name: Spark Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Spark Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r spark/requirements.txt
+
+      - name: Run Spark Unit Tests
+        run: |
+          cd spark
+          python -m pytest tests/ -v
+
+  # =========================================================================
+  # 3. Backend Unit Tests
+  # =========================================================================
+  test-backend-unit:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Backend Unit Tests
+        env:
+          SECRET_KEY: ci_test_secret_key_stream2vec_1234567890
+          DATABASE_URL: postgresql+asyncpg://stream2vec:stream2vec_dev_pass@localhost:5432/stream2vec
+          MINIO_ENDPOINT: localhost:9000
+          MINIO_ACCESS_KEY: minio_admin
+          MINIO_SECRET_KEY: minio_dev_password
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+        run: |
+          cd backend
+          python -m pytest tests/unit/ -v
+
+  # =========================================================================
+  # 4. Full Integration & E2E Tests (Docker Compose Stack)
+  # =========================================================================
   test-integration:
     name: End-to-End Integration Tests
     runs-on: ubuntu-latest
@@ -22,24 +110,55 @@ jobs:
 
       - name: Create .env Configuration
         run: |
-          cp .env.example .env
-          echo "APP_ENV=ci" >> .env
-          echo "DEBUG=true" >> .env
-          echo "SECRET_KEY=ci_test_secret_key_stream2vec_1234567890" >> .env
-          echo "POSTGRES_PASSWORD=stream2vec_dev_pass" >> .env
-          echo "DATABASE_URL=postgresql+asyncpg://stream2vec:stream2vec_dev_pass@postgres:5432/stream2vec" >> .env
-          echo "AIRFLOW_DB_PASSWORD=airflow_dev_pass" >> .env
-          echo "MINIO_ACCESS_KEY=minio_admin" >> .env
-          echo "MINIO_SECRET_KEY=minio_dev_password" >> .env
-          echo "AIRFLOW_FERNET_KEY=LG16KJNqRWytnvS4qSwOjuO-Dc5-ApGs8OZN6l1iHdI=" >> .env
-          echo "AIRFLOW_SECRET_KEY=284af4275cf45853f8bf319d309c540baf5b1eeaf9906205af27a28b6be234f1" >> .env
-          echo "AIRFLOW_ADMIN_PASSWORD=admin_dev_pass" >> .env
-          echo "GRAFANA_ADMIN_PASSWORD=grafana_dev_pass" >> .env
-          echo "KAFKA_CLUSTER_ID=25J7Z2HPS2e5k72M7Ac67w" >> .env
-          echo "BACKEND_WORKERS=1" >> .env
-
-      - name: Verify .env
-        run: cat .env
+          cat << 'EOF' > .env
+          APP_NAME=Stream2Vec
+          APP_ENV=development
+          APP_VERSION=0.1.0
+          DEBUG=true
+          SECRET_KEY=ci_test_secret_key_stream2vec_1234567890
+          BACKEND_HOST=0.0.0.0
+          BACKEND_PORT=8000
+          BACKEND_WORKERS=1
+          ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          POSTGRES_DB=stream2vec
+          POSTGRES_USER=stream2vec
+          POSTGRES_PASSWORD=stream2vec_dev_pass
+          DATABASE_URL=postgresql+asyncpg://stream2vec:stream2vec_dev_pass@postgres:5432/stream2vec
+          AIRFLOW_DB_NAME=airflow
+          AIRFLOW_DB_USER=airflow
+          AIRFLOW_DB_PASSWORD=airflow_dev_pass
+          MINIO_ENDPOINT=minio:9000
+          MINIO_ACCESS_KEY=minio_admin
+          MINIO_SECRET_KEY=minio_dev_password
+          MINIO_BUCKET_DOCUMENTS=documents
+          MINIO_USE_SSL=false
+          MINIO_API_PORT=9000
+          MINIO_CONSOLE_PORT=9001
+          KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+          KAFKA_TOPIC_DOCUMENTS=documents.raw
+          KAFKA_TOPIC_PROCESSING=documents.processing
+          KAFKA_TOPIC_COMPLETED=documents.completed
+          KAFKA_CONSUMER_GROUP=stream2vec-consumers
+          KAFKA_NUM_PARTITIONS=3
+          KAFKA_CLUSTER_ID=25J7Z2HPS2e5k72M7Ac67w
+          QDRANT_HOST=qdrant
+          QDRANT_PORT=6333
+          QDRANT_GRPC_PORT=6334
+          QDRANT_COLLECTION_DOCUMENTS=documents
+          QDRANT_API_KEY=
+          AIRFLOW_FERNET_KEY=LG16KJNqRWytnvS4qSwOjuO-Dc5-ApGs8OZN6l1iHdI=
+          AIRFLOW_SECRET_KEY=284af4275cf45853f8bf319d309c540baf5b1eeaf9906205af27a28b6be234f1
+          AIRFLOW_ADMIN_USERNAME=admin
+          AIRFLOW_ADMIN_PASSWORD=admin_dev_pass
+          GRAFANA_PORT=3000
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD=grafana_dev_pass
+          PROMETHEUS_PORT=9090
+          LOG_LEVEL=INFO
+          LOG_FORMAT=json
+          EOF
 
       - name: Build and Start Services
         run: |
@@ -47,16 +166,15 @@ jobs:
 
       - name: Wait for Postgres to be Healthy
         run: |
-          timeout 60s bash -c 'until docker compose exec -T postgres pg_isready -U stream2vec -d stream2vec; do echo "Waiting for postgres..."; sleep 5; done'
+          timeout 60s bash -c 'until docker compose exec -T postgres pg_isready -U stream2vec -d stream2vec; do echo "Waiting for PostgreSQL..."; sleep 3; done'
+
+      - name: Wait for Kafka to be Ready
+        run: |
+          timeout 90s bash -c 'until docker compose exec -T kafka kafka-broker-api-versions --bootstrap-server kafka:9092 > /dev/null 2>&1; do echo "Waiting for Kafka..."; sleep 5; done'
 
       - name: Wait for Backend to be Healthy
         run: |
-          timeout 120s bash -c 'until docker compose exec -T backend curl -sf http://localhost:8000/health; do echo "Waiting for backend..."; sleep 5; done'
-
-      - name: Check Backend Logs (on failure)
-        if: failure()
-        run: |
-          docker compose logs backend
+          timeout 120s bash -c 'until curl -sf http://localhost:8000/health || docker compose exec -T backend curl -sf http://localhost:8000/health; do echo "Waiting for backend..."; sleep 5; done'
 
       - name: Run Integration & E2E Tests
         run: |
@@ -65,13 +183,57 @@ jobs:
       - name: Collect Logs (on failure)
         if: failure()
         run: |
-          echo "=== Backend Logs ===" && docker compose logs backend
-          echo "=== Postgres Logs ===" && docker compose logs postgres
-          echo "=== Kafka Logs ===" && docker compose logs kafka
+          echo "=== Docker Compose PS ==="
+          docker compose ps
+          echo "=== Backend Logs ==="
+          docker compose logs --tail=100 backend
+          echo "=== Postgres Logs ==="
+          docker compose logs --tail=50 postgres
+          echo "=== Kafka Logs ==="
+          docker compose logs --tail=50 kafka
+          echo "=== MinIO Logs ==="
+          docker compose logs --tail=50 minio
+          echo "=== Qdrant Logs ==="
+          docker compose logs --tail=50 qdrant
 
       - name: Stop Services
         if: always()
         run: |
           docker compose down -v
 
-  # ... (docker-build job remains unchanged) ...
+  # =========================================================================
+  # 5. Docker Image Build Validation
+  # =========================================================================
+  docker-build:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: stream2vec-backend:test
+
+      - name: Build Spark Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./spark
+          file: ./spark/Dockerfile
+          push: false
+          tags: stream2vec-spark:test
+
+      - name: Build Airflow Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./airflow
+          file: ./airflow/Dockerfile
+          push: false
+          tags: stream2vec-airflow:test
