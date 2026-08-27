@@ -49,6 +49,13 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
                 yield ac
 
 
+@pytest_asyncio.fixture
+async def integration_client() -> AsyncGenerator[AsyncClient, None]:
+    """Asynchronous HTTP test client connected to the live backend instance."""
+    async with AsyncClient(base_url="http://127.0.0.1:8000", timeout=30.0) as ac:
+        yield ac
+
+
 @pytest.fixture
 def mock_minio() -> MagicMock:
     """Mock MinIO client for isolated unit testing."""
