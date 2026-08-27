@@ -28,7 +28,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     mock_conn = AsyncMock()
     mock_engine.connect.return_value.__aenter__.return_value = mock_conn
     mock_engine.connect.return_value.__aexit__.return_value = None
+    mock_engine.begin.return_value.__aenter__.return_value = mock_conn
+    mock_engine.begin.return_value.__aexit__.return_value = None
     mock_conn.execute = AsyncMock(return_value=None)
+    mock_conn.run_sync = AsyncMock(return_value=None)
     mock_engine.dispose = AsyncMock(return_value=None)
 
     with patch("app.database.session.engine", mock_engine), \

@@ -30,15 +30,26 @@ class BackendSettings(BaseSettings):
     host: str = Field(default="0.0.0.0", alias="BACKEND_HOST")
     port: int = Field(default=8000, alias="BACKEND_PORT")
     workers: int = Field(default=1, alias="BACKEND_WORKERS")
-    allowed_origins: list[str] = Field(default=["*"], alias="ALLOWED_ORIGINS")
+    allowed_origins: list[str] | str = Field(default=["*"], alias="ALLOWED_ORIGINS")
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
-    def parse_origins(cls, v: str | list) -> list[str]:
-        """Parse comma-separated origins string into a list."""
+    def parse_origins(cls, v: object) -> list[str]:
+        """Parse comma-separated or JSON origins string into a list."""
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
+            v_str = v.strip()
+            if not v_str:
+                return ["*"]
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v_str.split(",") if origin.strip()]
+        if isinstance(v, list):
+            return v
+        return ["*"]
 
 
 class DatabaseSettings(BaseSettings):
