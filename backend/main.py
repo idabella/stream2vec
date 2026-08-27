@@ -49,6 +49,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         1. Stop Kafka producer and flush pending messages.
         2. Dispose SQLAlchemy engine (closes all pooled connections).
     """
+    import asyncio
+    import time
+
     logger.info(
         "Starting Stream2Vec",
         extra={"version": settings.app.version, "env": settings.app.env},
@@ -60,49 +63,72 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from app.database.session import engine
     from sqlalchemy import text
 
-    try:
+    async def _init_postgres() -> None:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        logger.info("PostgreSQL connection established")
-    except Exception as exc:
-        logger.error("PostgreSQL connection failed", extra={"error": str(exc)})
-        raise
+
+    for attempt in range(1, 7):
+        try:
+            await _init_postgres()
+            logger.info("PostgreSQL connection established")
+            break
+        except Exception as exc:
+            if attempt == 6:
+                logger.error("PostgreSQL connection failed after 6 attempts", extra={"error": str(exc)})
+                raise
+            logger.warning("PostgreSQL connection attempt %d/6 failed: %s. Retrying in 2s...", attempt, exc)
+            await asyncio.sleep(2)
 
     # -------------------------------------------------------------------------
     # 2. MinIO — Initialize client and ensure bucket exists
     # -------------------------------------------------------------------------
     from app.storage.minio_client import init_minio_client
 
-    try:
-        init_minio_client()
-        logger.info("MinIO initialized")
-    except Exception as exc:
-        logger.error("MinIO initialization failed", extra={"error": str(exc)})
-        raise
+    for attempt in range(1, 7):
+        try:
+            init_minio_client()
+            logger.info("MinIO initialized")
+            break
+        except Exception as exc:
+            if attempt == 6:
+                logger.error("MinIO initialization failed after 6 attempts", extra={"error": str(exc)})
+                raise
+            logger.warning("MinIO initialization attempt %d/6 failed: %s. Retrying in 2s...", attempt, exc)
+            time.sleep(2)
 
     # -------------------------------------------------------------------------
     # 3. Kafka — Start producer and verify broker connectivity
     # -------------------------------------------------------------------------
     from app.messaging.kafka_client import init_kafka_producer
 
-    try:
-        await init_kafka_producer()
-        logger.info("Kafka producer started")
-    except Exception as exc:
-        logger.error("Kafka producer initialization failed", extra={"error": str(exc)})
-        raise
+    for attempt in range(1, 7):
+        try:
+            await init_kafka_producer()
+            logger.info("Kafka producer started")
+            break
+        except Exception as exc:
+            if attempt == 6:
+                logger.error("Kafka producer initialization failed after 6 attempts", extra={"error": str(exc)})
+                raise
+            logger.warning("Kafka producer initialization attempt %d/6 failed: %s. Retrying in 2s...", attempt, exc)
+            await asyncio.sleep(2)
 
     # -------------------------------------------------------------------------
     # 4. Qdrant — Initialize client and ensure collection exists
     # -------------------------------------------------------------------------
     from app.storage.qdrant_client import init_qdrant_client
 
-    try:
-        init_qdrant_client()
-        logger.info("Qdrant initialized")
-    except Exception as exc:
-        logger.error("Qdrant initialization failed", extra={"error": str(exc)})
-        raise
+    for attempt in range(1, 7):
+        try:
+            init_qdrant_client()
+            logger.info("Qdrant initialized")
+            break
+        except Exception as exc:
+            if attempt == 6:
+                logger.error("Qdrant initialization failed after 6 attempts", extra={"error": str(exc)})
+                raise
+            logger.warning("Qdrant initialization attempt %d/6 failed: %s. Retrying in 2s...", attempt, exc)
+            time.sleep(2)
 
     logger.info("All services initialized — Stream2Vec is ready")
 

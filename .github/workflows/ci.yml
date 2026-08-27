@@ -172,13 +172,18 @@ jobs:
         run: |
           timeout 90s bash -c 'until docker compose exec -T kafka kafka-broker-api-versions --bootstrap-server kafka:9092 > /dev/null 2>&1; do echo "Waiting for Kafka..."; sleep 5; done'
 
+      - name: Wait for MinIO and Qdrant
+        run: |
+          timeout 60s bash -c 'until curl -sf http://localhost:9000/minio/health/live || nc -z localhost 9000; do echo "Waiting for MinIO..."; sleep 3; done'
+          timeout 60s bash -c 'until curl -sf http://localhost:6333/readyz || nc -z localhost 6333; do echo "Waiting for Qdrant..."; sleep 3; done'
+
       - name: Start Backend Service
         run: |
           docker compose up -d backend
 
       - name: Wait for Backend to be Healthy
         run: |
-          timeout 60s bash -c 'until curl -sf http://localhost:8000/health; do echo "Waiting for backend..."; sleep 3; done'
+          timeout 90s bash -c 'until curl -sf http://localhost:8000/health; do echo "Waiting for backend..."; sleep 3; done'
 
       - name: Run Integration & E2E Tests
         run: |
