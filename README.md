@@ -163,14 +163,14 @@ make logs
 
 ## Roadmap
 
-- [ ] **Phase 1** : Fondations (architecture, configuration, structure) ← *Étape actuelle*
-- [ ] **Phase 2** : Backend — Ingestion de documents (upload, MinIO, Kafka)
-- [ ] **Phase 3** : Pipeline Spark — Extraction, nettoyage, chunking
-- [ ] **Phase 4** : Vectorisation — SentenceTransformers + Qdrant
-- [ ] **Phase 5** : API de recherche sémantique
-- [ ] **Phase 6** : Intégration LLM (RAG)
-- [ ] **Phase 7** : Frontend
-- [ ] **Phase 8** : CI/CD + déploiement cloud
+- [x] **Phase 1** : Fondations (architecture, configuration, structure)
+- [x] **Phase 2** : Backend — Ingestion de documents (upload, MinIO, Kafka)
+- [x] **Phase 3** : Pipeline Spark — Extraction, nettoyage, chunking
+- [x] **Phase 4** : Vectorisation — SentenceTransformers + Qdrant
+- [x] **Phase 5** : API de recherche sémantique
+- [x] **Phase 6** : Intégration LLM (RAG avec Gemini)
+- [ ] **Phase 7** : Frontend UI (Streamlit / React)
+- [x] **Phase 8** : CI/CD (GitHub Actions — Lint, Tests, Docker Build & Push)
 
 ---
 

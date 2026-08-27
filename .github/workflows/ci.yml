@@ -1,0 +1,177 @@
+name: Stream2Vec CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # 1. Code Quality & Linting
+  # =========================================================================
+  lint:
+    name: Lint & Style (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.4.4
+
+      - name: Run Ruff Linter
+        run: |
+          cd backend
+          ruff check app/ tests/
+
+  # =========================================================================
+  # 2. Spark Unit Tests (Cleaners, Chunkers, Extractors)
+  # =========================================================================
+  test-spark:
+    name: Spark Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Spark Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r spark/requirements.txt
+
+      - name: Run Spark Unit Tests
+        run: |
+          cd spark
+          python -m pytest tests/ -v
+
+  # =========================================================================
+  # 3. Backend Unit Tests
+  # =========================================================================
+  test-backend-unit:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Backend Unit Tests
+        env:
+          SECRET_KEY: ci_test_secret_key_stream2vec_1234567890
+          DATABASE_URL: postgresql+asyncpg://stream2vec:stream2vec_dev_pass@localhost:5432/stream2vec
+          MINIO_ENDPOINT: localhost:9000
+          MINIO_ACCESS_KEY: minio_admin
+          MINIO_SECRET_KEY: minio_dev_password
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+        run: |
+          cd backend
+          python -m pytest tests/unit/ -v
+
+  # =========================================================================
+  # 4. Full Integration & E2E Tests (Docker Compose Stack)
+  # =========================================================================
+  test-integration:
+    name: End-to-End Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create .env Configuration
+        run: |
+          cp .env.example .env
+          echo "SECRET_KEY=ci_test_secret_key_stream2vec_1234567890" >> .env
+          echo "POSTGRES_PASSWORD=stream2vec_dev_pass" >> .env
+          echo "AIRFLOW_DB_PASSWORD=airflow_dev_pass" >> .env
+          echo "MINIO_ACCESS_KEY=minio_admin" >> .env
+          echo "MINIO_SECRET_KEY=minio_dev_password" >> .env
+          echo "AIRFLOW_FERNET_KEY=LG16KJNqRWytnvS4qSwOjuO-Dc5-ApGs8OZN6l1iHdI=" >> .env
+          echo "AIRFLOW_SECRET_KEY=284af4275cf45853f8bf319d309c540baf5b1eeaf9906205af27a28b6be234f1" >> .env
+          echo "AIRFLOW_ADMIN_PASSWORD=admin_dev_pass" >> .env
+          echo "GRAFANA_ADMIN_PASSWORD=grafana_dev_pass" >> .env
+          echo "KAFKA_CLUSTER_ID=25J7Z2HPS2e5k72M7Ac67w" >> .env
+
+      - name: Build and Start Services
+        run: |
+          docker compose up -d postgres minio kafka qdrant backend
+
+      - name: Wait for Dependencies to be Healthy
+        run: |
+          timeout 120s bash -c 'until docker compose exec -T backend curl -sf http://localhost:8000/health; do sleep 5; done'
+
+      - name: Run Integration & E2E Tests
+        run: |
+          docker compose exec -T backend pytest tests/ -v
+
+      - name: Stop Services
+        if: always()
+        run: |
+          docker compose down -v
+
+  # =========================================================================
+  # 5. Docker Image Build Validation
+  # =========================================================================
+  docker-build:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: stream2vec-backend:test
+
+      - name: Build Spark Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./spark
+          file: ./spark/Dockerfile
+          push: false
+          tags: stream2vec-spark:test
+
+      - name: Build Airflow Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./airflow
+          file: ./airflow/Dockerfile
+          push: false
+          tags: stream2vec-airflow:test
