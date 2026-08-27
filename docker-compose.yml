@@ -78,12 +78,6 @@ services:
       - minio-data:/data
     networks:
       - stream2vec-net
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
   # ---------------------------------------------------------------------------
   # Kafka — Message broker in KRaft mode (no ZooKeeper)
@@ -171,12 +165,6 @@ services:
       - qdrant-data:/qdrant/storage
     networks:
       - stream2vec-net
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:6333/readyz || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
   # ---------------------------------------------------------------------------
   # Spark Master — Standalone cluster manager
@@ -429,14 +417,10 @@ services:
     networks:
       - stream2vec-net
     depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
+      - postgres
+      - minio
+      - kafka
+      - qdrant
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
